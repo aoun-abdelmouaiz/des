@@ -71,6 +71,7 @@ class DatabaseManager:
                     description TEXT,
                     quantity INTEGER DEFAULT 1,
                     price REAL NOT NULL,
+                    file_path TEXT,
                     FOREIGN KEY (work_order_id) REFERENCES work_orders (id)
                 )
             ''')
@@ -84,6 +85,7 @@ class DatabaseManager:
                     description TEXT,
                     quantity INTEGER DEFAULT 1,
                     price REAL NOT NULL,
+                    file_path TEXT,
                     FOREIGN KEY (work_order_id) REFERENCES work_orders (id)
                 )
             ''')
@@ -418,12 +420,12 @@ class DatabaseManager:
         return total_cost
     
     # Service operations
-    def add_service(self, work_order_id: int, name: str, description: str, quantity: int, price: float) -> int:
+    def add_service(self, work_order_id: int, name: str, description: str, quantity: int, price: float, file_path: str = None) -> int:
         """Add a service to work order"""
-        query = "INSERT INTO services (work_order_id, name, description, quantity, price) VALUES (?, ?, ?, ?, ?)"
+        query = "INSERT INTO services (work_order_id, name, description, quantity, price, file_path) VALUES (?, ?, ?, ?, ?, ?)"
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (work_order_id, name, description, quantity, price))
+            cursor.execute(query, (work_order_id, name, description, quantity, price, file_path))
             conn.commit()
             service_id = cursor.lastrowid
             
@@ -444,12 +446,12 @@ class DatabaseManager:
         return result
     
     # Spare parts operations
-    def add_spare_part(self, work_order_id: int, name: str, description: str, quantity: int, price: float) -> int:
+    def add_spare_part(self, work_order_id: int, name: str, description: str, quantity: int, price: float, file_path: str = None) -> int:
         """Add a spare part to work order"""
-        query = "INSERT INTO spare_parts (work_order_id, name, description, quantity, price) VALUES (?, ?, ?, ?, ?)"
+        query = "INSERT INTO spare_parts (work_order_id, name, description, quantity, price, file_path) VALUES (?, ?, ?, ?, ?, ?)"
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (work_order_id, name, description, quantity, price))
+            cursor.execute(query, (work_order_id, name, description, quantity, price, file_path))
             conn.commit()
             part_id = cursor.lastrowid
             
@@ -817,18 +819,28 @@ class DatabaseManager:
         return rows[0] if rows else None
 
     # New: Update operations for services and spare parts
-    def update_service(self, service_id: int, work_order_id: int, name: str, description: str, quantity: int, price: float) -> int:
+    def update_service(self, service_id: int, work_order_id: int, name: str, description: str, quantity: int, price: float, file_path: str = None) -> int:
         """Update a service and recalculate the work order total."""
-        query = "UPDATE services SET name = ?, description = ?, quantity = ?, price = ? WHERE id = ?"
-        result = self.execute_update(query, (name, description, quantity, price, service_id))
+        query = "UPDATE services SET name = ?, description = ?, quantity = ?, price = ?, file_path = ? WHERE id = ?"
+        result = self.execute_update(query, (name, description, quantity, price, file_path, service_id))
         # Recalculate total cost for the work order
         self.calculate_work_order_total(work_order_id)
         return result
 
-    def update_spare_part(self, part_id: int, work_order_id: int, name: str, description: str, quantity: int, price: float) -> int:
+    def update_spare_part(self, part_id: int, work_order_id: int, name: str, description: str, quantity: int, price: float, file_path: str = None) -> int:
         """Update a spare part and recalculate the work order total."""
-        query = "UPDATE spare_parts SET name = ?, description = ?, quantity = ?, price = ? WHERE id = ?"
-        result = self.execute_update(query, (name, description, quantity, price, part_id))
+        query = "UPDATE spare_parts SET name = ?, description = ?, quantity = ?, price = ?, file_path = ? WHERE id = ?"
+        result = self.execute_update(query, (name, description, quantity, price, file_path, part_id))
         # Recalculate total cost for the work order
         self.calculate_work_order_total(work_order_id)
         return result
+
+    def _ensure_column(self, cursor: sqlite3.Cursor, table: str, column: str, coltype: str):
+        """Add a column to a table if it does not exist."""
+        try:
+            cursor.execute(f"PRAGMA table_info({table})")
+            cols = [row[1] for row in cursor.fetchall()]
+            if column not in cols:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+        except Exception as e:
+            logging.warning(f"Could not ensure column {column} on {table}: {e}")

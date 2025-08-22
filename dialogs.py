@@ -393,7 +393,7 @@ class ServiceDialog(BaseDialog):
         self.service = service
         self.is_edit = service is not None
         title = "Edit Service" if self.is_edit else "Add Service"
-        super().__init__(parent, title, (510, 350))
+        super().__init__(parent, title, (510, 420))
         
         if self.is_edit:
             self.load_service_data()
@@ -432,15 +432,25 @@ class ServiceDialog(BaseDialog):
         self.total_label = ttk.Label(main_frame, text="$0.00", font=config.FONTS['header'])
         self.total_label.grid(row=4, column=1, sticky=W, pady=5, padx=(10, 0))
         
+        # Attachment
+        ttk.Label(main_frame, text="Attachment:").grid(row=5, column=0, sticky=W, pady=5)
+        attach_frame = ttk.Frame(main_frame)
+        attach_frame.grid(row=5, column=1, sticky=W, pady=5, padx=(10, 0))
+        self.attachment_path = tk.StringVar()
+        self.attachment_entry = ttk.Entry(attach_frame, textvariable=self.attachment_path, width=32)
+        self.attachment_entry.pack(side=LEFT)
+        ttk.Button(attach_frame, text="Browse", command=self.on_browse_attachment, bootstyle=INFO).pack(side=LEFT, padx=5)
+        ttk.Button(attach_frame, text="Open", command=self.on_open_attachment, bootstyle=SECONDARY).pack(side=LEFT)
+        
         # Bind events to update total
         self.quantity_var.trace('w', self.update_total)
         self.price_var.trace('w', self.update_total)
         
         # Buttons
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=5, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=6, column=0, columnspan=2, pady=20)
         
-        ttk.Button(button_frame, text="Add", command=self.on_ok, bootstyle=PRIMARY).pack(side=LEFT, padx=5)
+        ttk.Button(button_frame, text="Add" if not self.is_edit else "Save", command=self.on_ok, bootstyle=PRIMARY).pack(side=LEFT, padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.on_cancel, bootstyle=SECONDARY).pack(side=LEFT, padx=5)
     
     def load_service_data(self):
@@ -450,6 +460,7 @@ class ServiceDialog(BaseDialog):
         self.description_entry.insert('1.0', description)
         self.quantity_var.set(str(self.service.get('quantity', 1)))
         self.price_var.set(str(self.service.get('price', 0.0)))
+        self.attachment_path = tk.StringVar(value=self.service.get('file_path', '') or '')
     
     def update_total(self, *args):
         """Update total price calculation"""
@@ -460,6 +471,14 @@ class ServiceDialog(BaseDialog):
             self.total_label.config(text=utils.format_currency(total))
         except ValueError:
             self.total_label.config(text="$0.00")
+    
+    def on_browse_attachment(self):
+        path = utils.select_attachment_file()
+        if path:
+            self.attachment_path.set(path)
+    
+    def on_open_attachment(self):
+        utils.open_if_exists(self.attachment_path.get())
     
     def on_ok(self):
         # Validate input
@@ -484,7 +503,8 @@ class ServiceDialog(BaseDialog):
             'name': name,
             'description': description,
             'quantity': int(quantity),
-            'price': float(price)
+            'price': float(price),
+            'file_path': self.attachment_path.get().strip() or None,
         }
         
         self.dialog.destroy()
@@ -495,7 +515,7 @@ class SparePartDialog(BaseDialog):
         self.part = part
         self.is_edit = part is not None
         title = "Edit Spare Part" if self.is_edit else "Add Spare Part"
-        super().__init__(parent, title, (510, 350))
+        super().__init__(parent, title, (510, 420))
         
         if self.is_edit:
             self.load_part_data()
@@ -534,15 +554,25 @@ class SparePartDialog(BaseDialog):
         self.total_label = ttk.Label(main_frame, text="$0.00", font=config.FONTS['header'])
         self.total_label.grid(row=4, column=1, sticky=W, pady=5, padx=(10, 0))
         
+        # Attachment
+        ttk.Label(main_frame, text="Attachment:").grid(row=5, column=0, sticky=W, pady=5)
+        attach_frame = ttk.Frame(main_frame)
+        attach_frame.grid(row=5, column=1, sticky=W, pady=5, padx=(10, 0))
+        self.attachment_path = tk.StringVar()
+        self.attachment_entry = ttk.Entry(attach_frame, textvariable=self.attachment_path, width=32)
+        self.attachment_entry.pack(side=LEFT)
+        ttk.Button(attach_frame, text="Browse", command=self.on_browse_attachment, bootstyle=INFO).pack(side=LEFT, padx=5)
+        ttk.Button(attach_frame, text="Open", command=self.on_open_attachment, bootstyle=SECONDARY).pack(side=LEFT)
+        
         # Bind events to update total
         self.quantity_var.trace('w', self.update_total)
         self.price_var.trace('w', self.update_total)
         
         # Buttons
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=5, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=6, column=0, columnspan=2, pady=20)
         
-        ttk.Button(button_frame, text="Add", command=self.on_ok, bootstyle=PRIMARY).pack(side=LEFT, padx=5)
+        ttk.Button(button_frame, text="Add" if not self.is_edit else "Save", command=self.on_ok, bootstyle=PRIMARY).pack(side=LEFT, padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.on_cancel, bootstyle=SECONDARY).pack(side=LEFT, padx=5)
     
     def load_part_data(self):
@@ -552,6 +582,7 @@ class SparePartDialog(BaseDialog):
         self.description_entry.insert('1.0', description)
         self.quantity_var.set(str(self.part.get('quantity', 1)))
         self.price_var.set(str(self.part.get('price', 0.0)))
+        self.attachment_path = tk.StringVar(value=self.part.get('file_path', '') or '')
     
     def update_total(self, *args):
         """Update total price calculation"""
@@ -562,6 +593,14 @@ class SparePartDialog(BaseDialog):
             self.total_label.config(text=utils.format_currency(total))
         except ValueError:
             self.total_label.config(text="$0.00")
+    
+    def on_browse_attachment(self):
+        path = utils.select_attachment_file()
+        if path:
+            self.attachment_path.set(path)
+    
+    def on_open_attachment(self):
+        utils.open_if_exists(self.attachment_path.get())
     
     def on_ok(self):
         # Validate input
@@ -586,7 +625,8 @@ class SparePartDialog(BaseDialog):
             'name': name,
             'description': description,
             'quantity': int(quantity),
-            'price': float(price)
+            'price': float(price),
+            'file_path': self.attachment_path.get().strip() or None,
         }
         
         self.dialog.destroy()
