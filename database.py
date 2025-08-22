@@ -146,6 +146,48 @@ class DatabaseManager:
                 )
             ''')
             
+            # New: vehicle_types table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS vehicle_types (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    brand TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    UNIQUE (brand, model)
+                )
+            ''')
+            
+            # New: assets tables (employees, tools, diagnostics)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS employees (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    number_of_working_days INTEGER DEFAULT 0,
+                    note TEXT,
+                    file_path TEXT
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS tools (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    price REAL DEFAULT 0,
+                    note TEXT,
+                    file_path TEXT
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS diagnostics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    price REAL DEFAULT 0,
+                    note TEXT,
+                    file_path TEXT
+                )
+            ''')
+            
             conn.commit()
             
     def execute_query(self, query: str, params: tuple = ()) -> List[sqlite3.Row]:
@@ -668,3 +710,97 @@ class DatabaseManager:
         
         results = self.execute_query(query)
         return [dict(row) for row in results]
+
+    # Vehicle Type operations
+    def add_vehicle_type(self, brand: str, model: str) -> int:
+        query = "INSERT INTO vehicle_types (brand, model) VALUES (?, ?)"
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (brand.strip(), model.strip()))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_vehicle_types(self) -> List[sqlite3.Row]:
+        query = "SELECT * FROM vehicle_types ORDER BY brand, model"
+        return self.execute_query(query)
+
+    def update_vehicle_type(self, vt_id: int, brand: str, model: str) -> int:
+        query = "UPDATE vehicle_types SET brand = ?, model = ? WHERE id = ?"
+        return self.execute_update(query, (brand.strip(), model.strip(), vt_id))
+
+    def delete_vehicle_type(self, vt_id: int) -> int:
+        query = "DELETE FROM vehicle_types WHERE id = ?"
+        return self.execute_update(query, (vt_id,))
+
+    def get_brands(self) -> List[str]:
+        query = "SELECT DISTINCT brand FROM vehicle_types ORDER BY brand"
+        rows = self.execute_query(query)
+        return [row['brand'] for row in rows]
+
+    def get_models_by_brand(self, brand: str) -> List[str]:
+        query = "SELECT model FROM vehicle_types WHERE brand = ? ORDER BY model"
+        rows = self.execute_query(query, (brand,))
+        return [row['model'] for row in rows]
+
+    # Employees CRUD
+    def add_employee(self, name: str, description: str, number_of_working_days: int, note: str, file_path: str) -> int:
+        query = "INSERT INTO employees (name, description, number_of_working_days, note, file_path) VALUES (?, ?, ?, ?, ?)"
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (name, description, number_of_working_days, note, file_path))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_employees(self) -> List[sqlite3.Row]:
+        query = "SELECT * FROM employees ORDER BY id DESC"
+        return self.execute_query(query)
+
+    def update_employee(self, emp_id: int, name: str, description: str, number_of_working_days: int, note: str, file_path: str) -> int:
+        query = "UPDATE employees SET name = ?, description = ?, number_of_working_days = ?, note = ?, file_path = ? WHERE id = ?"
+        return self.execute_update(query, (name, description, number_of_working_days, note, file_path, emp_id))
+
+    def delete_employee(self, emp_id: int) -> int:
+        query = "DELETE FROM employees WHERE id = ?"
+        return self.execute_update(query, (emp_id,))
+
+    # Tools CRUD
+    def add_tool(self, name: str, description: str, price: float, note: str, file_path: str) -> int:
+        query = "INSERT INTO tools (name, description, price, note, file_path) VALUES (?, ?, ?, ?, ?)"
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (name, description, price, note, file_path))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_tools(self) -> List[sqlite3.Row]:
+        query = "SELECT * FROM tools ORDER BY id DESC"
+        return self.execute_query(query)
+
+    def update_tool(self, tool_id: int, name: str, description: str, price: float, note: str, file_path: str) -> int:
+        query = "UPDATE tools SET name = ?, description = ?, price = ?, note = ?, file_path = ? WHERE id = ?"
+        return self.execute_update(query, (name, description, price, note, file_path, tool_id))
+
+    def delete_tool(self, tool_id: int) -> int:
+        query = "DELETE FROM tools WHERE id = ?"
+        return self.execute_update(query, (tool_id,))
+
+    # Diagnostics CRUD
+    def add_diagnostic(self, name: str, description: str, price: float, note: str, file_path: str) -> int:
+        query = "INSERT INTO diagnostics (name, description, price, note, file_path) VALUES (?, ?, ?, ?, ?)"
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (name, description, price, note, file_path))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_diagnostics(self) -> List[sqlite3.Row]:
+        query = "SELECT * FROM diagnostics ORDER BY id DESC"
+        return self.execute_query(query)
+
+    def update_diagnostic(self, diag_id: int, name: str, description: str, price: float, note: str, file_path: str) -> int:
+        query = "UPDATE diagnostics SET name = ?, description = ?, price = ?, note = ?, file_path = ? WHERE id = ?"
+        return self.execute_update(query, (name, description, price, note, file_path, diag_id))
+
+    def delete_diagnostic(self, diag_id: int) -> int:
+        query = "DELETE FROM diagnostics WHERE id = ?"
+        return self.execute_update(query, (diag_id,))
