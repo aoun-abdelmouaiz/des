@@ -47,11 +47,18 @@ FONTS = {
 ASSETS_DIR = Path("assets")
 LOGOS_DIR = ASSETS_DIR / "logos"
 EXPORTS_DIR = Path("exports")
+# New asset subdirectories
+ASSETS_EMPLOYEES_DIR = ASSETS_DIR / "employees"
+ASSETS_TOOLS_DIR = ASSETS_DIR / "tools"
+ASSETS_DIAGNOSTICS_DIR = ASSETS_DIR / "diagnostics"
 
 # Create directories if they don't exist
 ASSETS_DIR.mkdir(exist_ok=True)
 LOGOS_DIR.mkdir(exist_ok=True)
 EXPORTS_DIR.mkdir(exist_ok=True)
+ASSETS_EMPLOYEES_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_TOOLS_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_DIAGNOSTICS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Services and Parts predefined lists
 DEFAULT_SERVICES = [
