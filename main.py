@@ -109,6 +109,8 @@ class WorkshopApp:
             ('work_orders', 'Work Orders', '🔧'),
             ('invoices', 'Invoices', '📄'),
             ('appointments', 'Appointments', '📅'),
+            ('vehicle_types', 'Vehicle Types', '🚘'),
+            ('assets', 'Assets', '🗂️'),
             #('services_parts', 'Services', '🔧'),
             ('reports', 'Reports', '📊'),
             ('settings', 'Settings', '⚙️')
@@ -175,6 +177,8 @@ class WorkshopApp:
             'work_orders': 'Work Order Management',
             'invoices': 'Invoice Management',
             'appointments': 'Appointment Management',
+            'vehicle_types': 'Vehicle Types',
+            'assets': 'Assets',
             #'services_parts': 'ServicesPartsFrame',
             'reports': 'Reports and Statistics',
             'settings': 'Application Settings'
@@ -189,6 +193,8 @@ class WorkshopApp:
             'work_orders': WorkOrdersFrame,
             'invoices': InvoicesFrame,
             'appointments': AppointmentsFrame,
+            'vehicle_types': VehicleTypesFrame,
+            'assets': AssetsFrame,
             #'services_parts': ServicesPartsFrame,
             'reports': ReportsFrame,
             'settings': SettingsFrame

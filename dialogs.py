@@ -106,6 +106,15 @@ class CustomerDialog(BaseDialog):
             utils.show_error("Validation Error", "Please enter a valid phone number")
             return
         
+        # No-changes detection in edit mode
+        if self.is_edit:
+            old_name = self.customer.get('name', '').strip()
+            old_phone = self.customer.get('phone', '').strip()
+            old_address = (self.customer.get('address') or '').strip()
+            if name == old_name and phone == old_phone and address == old_address:
+                utils.show_warning("No changes detected", "No changes detected")
+                return
+        
         self.result = {
             'name': name,
             'phone': phone,
@@ -121,7 +130,7 @@ class VehicleDialog(BaseDialog):
         self.vehicle = vehicle
         self.is_edit = vehicle is not None
         title = "Edit Vehicle" if self.is_edit else "Add Vehicle"
-        super().__init__(parent, title, (520, 300))
+        super().__init__(parent, title, (520, 340))
         
         if self.is_edit:
             self.load_vehicle_data()
@@ -137,33 +146,35 @@ class VehicleDialog(BaseDialog):
         self.license_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
         self.license_entry.focus()
         
-        # Brand field
+        # Brand field (readonly combobox)
         ttk.Label(main_frame, text="Brand:").grid(row=1, column=0, sticky=W, pady=5)
         self.brand_var = tk.StringVar()
-        self.brand_entry = ttk.Entry(main_frame, textvariable=self.brand_var, width=40)
-        self.brand_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
+        self.brand_combo = ttk.Combobox(main_frame, textvariable=self.brand_var, width=37, state='readonly')
+        self.brand_combo.grid(row=1, column=1, pady=5, padx=(10, 0))
+        self.brand_combo.bind('<<ComboboxSelected>>', self.on_brand_change)
+        self.load_brands()
         
-        # Model field
+        # Model field (readonly combobox filtered by brand)
         ttk.Label(main_frame, text="Model:").grid(row=2, column=0, sticky=W, pady=5)
         self.model_var = tk.StringVar()
-        self.model_entry = ttk.Entry(main_frame, textvariable=self.model_var, width=40)
-        self.model_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+        self.model_combo = ttk.Combobox(main_frame, textvariable=self.model_var, width=37, state='readonly')
+        self.model_combo.grid(row=2, column=1, pady=5, padx=(10, 0))
         
-        # Customer Phone field
+        # Customer Phone field with autocomplete
         ttk.Label(main_frame, text="Customer Phone:").grid(row=3, column=0, sticky=W, pady=5)
-        
-        # Create frame for phone selection
         phone_frame = ttk.Frame(main_frame)
         phone_frame.grid(row=3, column=1, pady=5, padx=(10, 0), sticky=W+E)
         
         self.phone_var = tk.StringVar()
         self.phone_combo = ttk.Combobox(phone_frame, textvariable=self.phone_var, width=30)
         self.phone_combo.pack(side=LEFT)
+        self.phone_combo.bind('<KeyRelease>', self.on_phone_type)
+        self.phone_combo.bind('<<ComboboxSelected>>', self.on_phone_select)
         
-        # Load customer phones
-        self.load_customer_phones()
+        # Initial load of customers
+        self.load_customer_phones("")
         
-        ttk.Button(phone_frame, text="Refresh", command=self.load_customer_phones,
+        ttk.Button(phone_frame, text="Refresh", command=lambda: self.load_customer_phones(""),
                   bootstyle=OUTLINE).pack(side=LEFT, padx=(5, 0))
         
         # Buttons
@@ -173,17 +184,58 @@ class VehicleDialog(BaseDialog):
         ttk.Button(button_frame, text="Save", command=self.on_ok, bootstyle=PRIMARY).pack(side=LEFT, padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.on_cancel, bootstyle=SECONDARY).pack(side=LEFT, padx=5)
     
-    def load_customer_phones(self):
-        """Load customer phone numbers for selection"""
-        customers = self.db_manager.get_customers()
-        phone_list = [f"{customer['phone']} - {customer['name']}" for customer in customers]
-        self.phone_combo['values'] = phone_list
+    def load_brands(self):
+        try:
+            brands = self.db_manager.get_brands()
+            self.brand_combo['values'] = brands
+        except Exception:
+            self.brand_combo['values'] = []
+    
+    def on_brand_change(self, event=None):
+        brand = self.brand_var.get().strip()
+        try:
+            models = self.db_manager.get_models_by_brand(brand) if brand else []
+            self.model_combo['values'] = models
+            # Clear model selection if brand changed
+            if self.model_var.get() not in models:
+                self.model_var.set('')
+        except Exception:
+            self.model_combo['values'] = []
+    
+    def load_customer_phones(self, search_term: str):
+        try:
+            if search_term:
+                customers = self.db_manager.search_customers(search_term)
+            else:
+                customers = self.db_manager.get_customers()
+            phone_list = [f"{customer['phone']} - {customer['name']}" for customer in customers]
+            self.phone_combo['values'] = phone_list
+        except Exception:
+            self.phone_combo['values'] = []
+    
+    def on_phone_type(self, event=None):
+        term = self.phone_var.get().strip()
+        self.load_customer_phones(term)
+    
+    def on_phone_select(self, event=None):
+        # Keep selection as 'phone - name'; parsing will extract phone on save
+        pass
     
     def load_vehicle_data(self):
         """Load vehicle data for editing"""
         self.license_var.set(self.vehicle.get('license_plate', ''))
-        self.brand_var.set(self.vehicle.get('brand', ''))
-        self.model_var.set(self.vehicle.get('model', ''))
+        # For brand/model, populate combos then set values
+        self.load_brands()
+        brand_value = self.vehicle.get('brand', '')
+        model_value = self.vehicle.get('model', '')
+        if brand_value:
+            self.brand_var.set(brand_value)
+            try:
+                self.model_combo['values'] = self.db_manager.get_models_by_brand(brand_value)
+            except Exception:
+                self.model_combo['values'] = []
+        if model_value:
+            self.model_var.set(model_value)
         
         # Set customer phone
         customer_phone = self.vehicle.get('customer_phone', '')
@@ -214,8 +266,21 @@ class VehicleDialog(BaseDialog):
             utils.show_error("Validation Error", "Customer must be selected")
             return
         
-        # Extract phone number from selection
-        customer_phone = phone_selection.split(' - ')[0]
+        # Extract phone number from selection (support plain phone too)
+        if ' - ' in phone_selection:
+            customer_phone = phone_selection.split(' - ')[0]
+        else:
+            customer_phone = phone_selection
+        
+        # No-changes detection in edit mode
+        if self.is_edit:
+            old_lp = (self.vehicle.get('license_plate') or '').strip()
+            old_brand = (self.vehicle.get('brand') or '').strip()
+            old_model = (self.vehicle.get('model') or '').strip()
+            old_phone = (self.vehicle.get('customer_phone') or '').strip()
+            if (license_plate == old_lp and brand == old_brand and model == old_model and customer_phone == old_phone):
+                utils.show_warning("No changes detected", "No changes detected")
+                return
         
         self.result = {
             'license_plate': license_plate,

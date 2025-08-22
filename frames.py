@@ -68,8 +68,9 @@ class CustomersFrame(BaseFrame):
         
         ttk.Button(button_frame, text="Add Customer", command=self.add_customer,
                   bootstyle=PRIMARY).pack(side=LEFT, padx=2)
-        ttk.Button(button_frame, text="Edit", command=self.edit_customer,
-                  bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        self.update_btn = ttk.Button(button_frame, text="Update", command=self.edit_customer,
+                  bootstyle=SECONDARY, state='disabled')
+        self.update_btn.pack(side=LEFT, padx=2)
         ttk.Button(button_frame, text="Delete", command=self.delete_customer,
                   bootstyle=DANGER).pack(side=LEFT, padx=2)
         ttk.Button(button_frame, text="Refresh", command=self.refresh,
@@ -114,8 +115,14 @@ class CustomersFrame(BaseFrame):
         v_scrollbar.pack(side=RIGHT, fill=Y)
         h_scrollbar.pack(side=BOTTOM, fill=X)
         
-        # Bind double-click to edit
+        # Bind double-click to edit and selection to enable update
         self.tree.bind('<Double-1>', lambda e: self.edit_customer())
+        self.tree.bind('<<TreeviewSelect>>', lambda e: self._set_update_state())
+    
+    def _set_update_state(self):
+        if hasattr(self, 'update_btn'):
+            state = 'normal' if self.tree.selection() else 'disabled'
+            self.update_btn.configure(state=state)
     
     def refresh(self):
         """Refresh customer data"""
@@ -255,8 +262,9 @@ class VehiclesFrame(BaseFrame):
         
         ttk.Button(button_frame, text="Add Vehicle", command=self.add_vehicle,
                   bootstyle=PRIMARY).pack(side=LEFT, padx=2)
-        ttk.Button(button_frame, text="Edit", command=self.edit_vehicle,
-                  bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        self.update_btn = ttk.Button(button_frame, text="Update", command=self.edit_vehicle,
+                  bootstyle=SECONDARY, state='disabled')
+        self.update_btn.pack(side=LEFT, padx=2)
         ttk.Button(button_frame, text="Delete", command=self.delete_vehicle,
                   bootstyle=DANGER).pack(side=LEFT, padx=2)
         ttk.Button(button_frame, text="Refresh", command=self.refresh,
@@ -302,8 +310,14 @@ class VehiclesFrame(BaseFrame):
         v_scrollbar.pack(side=RIGHT, fill=Y)
         h_scrollbar.pack(side=BOTTOM, fill=X)
         
-        # Bind double-click to edit
+        # Bind double-click to edit and selection to enable update
         self.tree.bind('<Double-1>', lambda e: self.edit_vehicle())
+        self.tree.bind('<<TreeviewSelect>>', lambda e: self._set_update_state())
+    
+    def _set_update_state(self):
+        if hasattr(self, 'update_btn'):
+            state = 'normal' if self.tree.selection() else 'disabled'
+            self.update_btn.configure(state=state)
     
     def refresh(self):
         """Refresh vehicle data"""
@@ -425,53 +439,47 @@ class WorkOrdersFrame(BaseFrame):
                                font=config.FONTS['title'])
         title_label.pack(anchor=W, pady=(0, 10))
         
-        # Search, service type, status filter and buttons frame
-        top_frame = ttk.Frame(main_frame)
-        top_frame.pack(fill=X, pady=(0, 10))
-
-        # Left: Search + Service Type + Status
-        filter_frame = ttk.Frame(top_frame)
-        filter_frame.pack(side=LEFT)
-
-        # Search
-        ttk.Label(filter_frame, text="Search:").pack(side=LEFT, padx=(0, 5))
-        self.search_var = tk.StringVar()
-        self.search_entry = ttk.Entry(filter_frame, textvariable=self.search_var, width=30)
-        self.search_entry.pack(side=LEFT, padx=(0, 5))
-        ttk.Button(filter_frame, text="Search", command=self.refresh, bootstyle=INFO).pack(side=LEFT, padx=(0, 10))
-
-        # Service type filter
-        ttk.Label(filter_frame, text="Service Type:").pack(side=LEFT, padx=(0, 5))
-        self.service_type_var = tk.StringVar(value="All Services")
-        self.service_type_combo = ttk.Combobox(
-            filter_frame,
-            textvariable=self.service_type_var,
-            values=["All Services", "Preventive", "Corrective", "Inspection"],
-            width=18
-        )
-        self.service_type_combo.pack(side=LEFT, padx=(0, 10))
-        self.service_type_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh())
-
-        # Status filter (existing)
-        ttk.Label(filter_frame, text="Status:").pack(side=LEFT, padx=(0, 5))
-        self.filter_var = tk.StringVar(value="All")
-        filter_combo = ttk.Combobox(filter_frame, textvariable=self.filter_var, 
-                                   values=["All", "Open", "In Progress", "Completed"], width=15)
-        filter_combo.pack(side=LEFT, padx=(0, 10))
-        filter_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh())
+        # Buttons frame (top)
+        top_buttons_frame = ttk.Frame(main_frame)
+        top_buttons_frame.pack(fill=X, pady=(0, 6))
         
-        # Buttons
-        button_frame = ttk.Frame(top_frame)
-        button_frame.pack(side=RIGHT)
-        
-        ttk.Button(button_frame, text="New Order", command=self.add_work_order,
+        ttk.Button(top_buttons_frame, text="New Order", command=self.add_work_order,
                   bootstyle=PRIMARY).pack(side=LEFT, padx=2)
-        ttk.Button(button_frame, text="View Details", command=self.view_details,
+        ttk.Button(top_buttons_frame, text="View Details", command=self.view_details,
                   bootstyle=SECONDARY).pack(side=LEFT, padx=2)
-        ttk.Button(button_frame, text="Update Status", command=self.update_status,
+        ttk.Button(top_buttons_frame, text="Update Status", command=self.update_status,
                   bootstyle=WARNING).pack(side=LEFT, padx=2)
-        ttk.Button(button_frame, text="Refresh", command=self.refresh,
+        ttk.Button(top_buttons_frame, text="Refresh", command=self.refresh,
                   bootstyle=SUCCESS).pack(side=LEFT, padx=2)
+        
+        # Search and combined filter under buttons
+        filter_row = ttk.Frame(main_frame)
+        filter_row.pack(fill=X, pady=(0, 10))
+        
+        ttk.Label(filter_row, text="Search:").pack(side=LEFT, padx=(0, 5))
+        self.search_var = tk.StringVar()
+        self.search_entry = ttk.Entry(filter_row, textvariable=self.search_var, width=30)
+        self.search_entry.pack(side=LEFT, padx=(0, 5))
+        ttk.Button(filter_row, text="Search", command=self.refresh, bootstyle=INFO).pack(side=LEFT, padx=(0, 10))
+        
+        ttk.Label(filter_row, text="Filter:").pack(side=LEFT, padx=(0, 5))
+        self.combo_filter_var = tk.StringVar(value="All")
+        self.combo_filter = ttk.Combobox(
+            filter_row,
+            textvariable=self.combo_filter_var,
+            values=[
+                "All",
+                "Status: Open",
+                "Status: In Progress",
+                "Status: Completed",
+                "Service: Preventive",
+                "Service: Corrective",
+                "Service: Inspection",
+            ],
+            width=25
+        )
+        self.combo_filter.pack(side=LEFT, padx=(0, 10))
+        self.combo_filter.bind('<<ComboboxSelected>>', lambda e: self.refresh())
         
         # Treeview for work orders
         self.create_treeview(main_frame)
@@ -524,22 +532,25 @@ class WorkOrdersFrame(BaseFrame):
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        # Collect filters
+        # Determine filters
         keyword = self.search_var.get().strip()
-        service_type = self.service_type_var.get().strip()
-        if service_type == "All Services":
-            service_type = None
-
-        # Load work orders using combined filters
+        selected = (self.combo_filter_var.get() or "").strip()
+        service_type = None
+        status_filter = None
+        if selected.startswith("Status:"):
+            status_filter = selected.split(":", 1)[1].strip()
+        elif selected.startswith("Service:"):
+            service_type = selected.split(":", 1)[1].strip()
+        
+        # Fetch with service type filter first
         if keyword or service_type:
             work_orders = self.db_manager.filter_work_orders(keyword=keyword, service_type=service_type)
         else:
             work_orders = self.db_manager.get_work_orders()
-
-        # Apply status filter last
-        filter_status = self.filter_var.get()
-        if filter_status != "All":
-            work_orders = [wo for wo in work_orders if wo['status'] == filter_status]
+        
+        # Apply status filter if any
+        if status_filter:
+            work_orders = [wo for wo in work_orders if wo['status'] == status_filter]
         
         # Populate treeview
         for wo in work_orders:
@@ -1575,6 +1586,8 @@ class WorkOrderDetailsWindow:
         
         ttk.Button(button_frame, text="Add Service", command=self.add_service,
                   bootstyle=PRIMARY).pack(side=LEFT, padx=5)
+        ttk.Button(button_frame, text="Update Service", command=self.update_service,
+                  bootstyle=INFO).pack(side=LEFT, padx=5)
         ttk.Button(button_frame, text="Remove Service", command=self.remove_service,
                   bootstyle=DANGER).pack(side=LEFT, padx=5)
         
@@ -1607,6 +1620,8 @@ class WorkOrderDetailsWindow:
         
         ttk.Button(button_frame, text="Add Part", command=self.add_part,
                   bootstyle=PRIMARY).pack(side=LEFT, padx=5)
+        ttk.Button(button_frame, text="Update Part", command=self.update_part,
+                  bootstyle=INFO).pack(side=LEFT, padx=5)
         ttk.Button(button_frame, text="Remove Part", command=self.remove_part,
                   bootstyle=DANGER).pack(side=LEFT, padx=5)
         
@@ -1724,25 +1739,42 @@ class WorkOrderDetailsWindow:
             except Exception as e:
                 utils.show_error("Error", f"Failed to add service: {e}")
     
-    def add_part(self):
-        """Add part to work order"""
-        dialog = SparePartDialog(self.window)
+    def update_service(self):
+        """Update selected service"""
+        selection = self.services_tree.selection()
+        if not selection:
+            utils.show_warning("No Selection", "Please select a service to update")
+            return
+        item = self.services_tree.item(selection[0])
+        service_id = int(item['values'][0])
+        row = self.db_manager.get_service_by_id(service_id)
+        if not row:
+            utils.show_error("Error", "Service not found")
+            return
+        service_data = {
+            'id': row['id'],
+            'name': row['name'],
+            'description': row['description'],
+            'quantity': row['quantity'],
+            'price': row['price']
+        }
+        dialog = ServiceDialog(self.window, service=service_data)
         self.window.wait_window(dialog.dialog)
-        
         if dialog.result:
             try:
-                self.db_manager.add_spare_part(
+                self.db_manager.update_service(
+                    service_id,
                     self.work_order_id,
                     dialog.result['name'],
                     dialog.result['description'],
                     dialog.result['quantity'],
                     dialog.result['price']
                 )
-                utils.show_info("Success", "Spare part added successfully")
-                self.refresh_parts()
+                utils.show_info("Success", "Service updated successfully")
+                self.refresh_services()
                 self.update_total()
             except Exception as e:
-                utils.show_error("Error", f"Failed to add spare part: {e}")
+                utils.show_error("Error", f"Failed to update service: {e}")
     
     def remove_service(self):
         """Remove selected service"""
@@ -1763,6 +1795,63 @@ class WorkOrderDetailsWindow:
                 self.update_total()
             except Exception as e:
                 utils.show_error("Error", f"Failed to remove service: {e}")
+    
+    def add_part(self):
+        """Add part to work order"""
+        dialog = SparePartDialog(self.window)
+        self.window.wait_window(dialog.dialog)
+        
+        if dialog.result:
+            try:
+                self.db_manager.add_spare_part(
+                    self.work_order_id,
+                    dialog.result['name'],
+                    dialog.result['description'],
+                    dialog.result['quantity'],
+                    dialog.result['price']
+                )
+                utils.show_info("Success", "Spare part added successfully")
+                self.refresh_parts()
+                self.update_total()
+            except Exception as e:
+                utils.show_error("Error", f"Failed to add spare part: {e}")
+    
+    def update_part(self):
+        """Update selected part"""
+        selection = self.parts_tree.selection()
+        if not selection:
+            utils.show_warning("No Selection", "Please select a part to update")
+            return
+        item = self.parts_tree.item(selection[0])
+        part_id = int(item['values'][0])
+        row = self.db_manager.get_spare_part_by_id(part_id)
+        if not row:
+            utils.show_error("Error", "Part not found")
+            return
+        part_data = {
+            'id': row['id'],
+            'name': row['name'],
+            'description': row['description'],
+            'quantity': row['quantity'],
+            'price': row['price']
+        }
+        dialog = SparePartDialog(self.window, part=part_data)
+        self.window.wait_window(dialog.dialog)
+        if dialog.result:
+            try:
+                self.db_manager.update_spare_part(
+                    part_id,
+                    self.work_order_id,
+                    dialog.result['name'],
+                    dialog.result['description'],
+                    dialog.result['quantity'],
+                    dialog.result['price']
+                )
+                utils.show_info("Success", "Part updated successfully")
+                self.refresh_parts()
+                self.update_total()
+            except Exception as e:
+                utils.show_error("Error", f"Failed to update part: {e}")
     
     def remove_part(self):
         """Remove selected part"""
@@ -1888,4 +1977,661 @@ class InvoiceCreateDialog(BaseDialog):
         
         self.result = {'work_order_id': work_order_id}
         self.dialog.destroy()
+
+class VehicleTypesFrame(BaseFrame):
+    """Frame for managing vehicle types (brand + model)"""
+    
+    def setup_frame(self):
+        main_frame = ttk.Frame(self)
+        main_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        
+        title_label = ttk.Label(main_frame, text="Vehicle Types", font=config.FONTS['title'])
+        title_label.pack(anchor=W, pady=(0, 10))
+        
+        fields = ttk.Frame(main_frame)
+        fields.pack(fill=X, pady=(0, 10))
+        
+        ttk.Label(fields, text="Brand:").grid(row=0, column=0, sticky=W, pady=5)
+        self.brand_var = tk.StringVar()
+        self.brand_entry = ttk.Entry(fields, textvariable=self.brand_var, width=30)
+        self.brand_entry.grid(row=0, column=1, pady=5, padx=(10, 20), sticky=W)
+        
+        ttk.Label(fields, text="Model:").grid(row=0, column=2, sticky=W, pady=5)
+        self.model_var = tk.StringVar()
+        self.model_entry = ttk.Entry(fields, textvariable=self.model_var, width=30)
+        self.model_entry.grid(row=0, column=3, pady=5, padx=(10, 0), sticky=W)
+        
+        btns = ttk.Frame(main_frame)
+        btns.pack(fill=X, pady=(0, 10))
+        ttk.Button(btns, text="Add", command=self.add_type, bootstyle=PRIMARY).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Update", command=self.update_type, bootstyle=INFO).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Delete", command=self.delete_type, bootstyle=DANGER).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Clear", command=self.clear_fields, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        
+        self.create_tree(main_frame)
+        self.refresh()
+    
+    def create_tree(self, parent):
+        frame = ttk.Frame(parent)
+        frame.pack(fill=BOTH, expand=True)
+        columns = ('ID', 'Brand', 'Model')
+        self.tree = ttk.Treeview(frame, columns=columns, show='headings', height=18)
+        for col in columns:
+            self.tree.heading(col, text=col)
+        self.tree.column('ID', width=60)
+        self.tree.column('Brand', width=200)
+        self.tree.column('Model', width=240)
+        vsb = ttk.Scrollbar(frame, orient=VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=vsb.set)
+        self.tree.pack(side=LEFT, fill=BOTH, expand=True)
+        vsb.pack(side=RIGHT, fill=Y)
+        self.tree.bind('<<TreeviewSelect>>', self.on_select)
+    
+    def refresh(self):
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+        rows = self.db_manager.get_vehicle_types()
+        for row in rows:
+            self.tree.insert('', END, values=(row['id'], row['brand'], row['model']))
+    
+    def on_select(self, event=None):
+        sel = self.tree.selection()
+        if not sel:
+            return
+        item = self.tree.item(sel[0])
+        _id, brand, model = item['values']
+        self.brand_var.set(brand)
+        self.model_var.set(model)
+    
+    def clear_fields(self):
+        self.brand_var.set("")
+        self.model_var.set("")
+        self.tree.selection_remove(self.tree.selection())
+    
+    def add_type(self):
+        brand = (self.brand_var.get() or '').strip()
+        model = (self.model_var.get() or '').strip()
+        if not brand or not model:
+            utils.show_error("Validation Error", "Brand and Model are required")
+            return
+        try:
+            self.db_manager.add_vehicle_type(brand, model)
+            utils.show_info("Success", "Vehicle type added")
+            self.refresh()
+            self.clear_fields()
+        except Exception as e:
+            utils.show_error("Error", f"Failed to add vehicle type: {e}")
+    
+    def update_type(self):
+        sel = self.tree.selection()
+        if not sel:
+            utils.show_warning("No Selection", "Please select a vehicle type to update")
+            return
+        item = self.tree.item(sel[0])
+        vt_id = int(item['values'][0])
+        brand = (self.brand_var.get() or '').strip()
+        model = (self.model_var.get() or '').strip()
+        if not brand or not model:
+            utils.show_error("Validation Error", "Brand and Model are required")
+            return
+        # Detect no changes
+        if brand == item['values'][1] and model == item['values'][2]:
+            utils.show_warning("No changes detected", "No changes detected")
+            return
+        try:
+            self.db_manager.update_vehicle_type(vt_id, brand, model)
+            utils.show_info("Success", "Vehicle type updated")
+            self.refresh()
+            self.clear_fields()
+        except Exception as e:
+            utils.show_error("Error", f"Failed to update vehicle type: {e}")
+    
+    def delete_type(self):
+        sel = self.tree.selection()
+        if not sel:
+            utils.show_warning("No Selection", "Please select a vehicle type to delete")
+            return
+        item = self.tree.item(sel[0])
+        vt_id = int(item['values'][0])
+        brand, model = item['values'][1], item['values'][2]
+        if utils.ask_yes_no("Confirm Delete", f"Delete '{brand} {model}'?"):
+            try:
+                self.db_manager.delete_vehicle_type(vt_id)
+                utils.show_info("Success", "Vehicle type deleted")
+                self.refresh()
+                self.clear_fields()
+            except Exception as e:
+                utils.show_error("Error", f"Failed to delete vehicle type: {e}")
+
+class AssetsFrame(BaseFrame):
+    """Frame for managing assets: Employees, Tools, Diagnostic"""
+    
+    def setup_frame(self):
+        main = ttk.Frame(self)
+        main.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        ttk.Label(main, text="Assets", font=config.FONTS['title']).pack(anchor=W, pady=(0, 10))
+        
+        self.notebook = ttk.Notebook(main)
+        self.notebook.pack(fill=BOTH, expand=True)
+        
+        self._build_employees_tab()
+        self._build_tools_tab()
+        self._build_diagnostics_tab()
+        
+        self.refresh()
+    
+    # ---- Employees Tab ----
+    def _build_employees_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Employees")
+        
+        fields = ttk.Frame(tab)
+        fields.pack(fill=X, padx=5, pady=5)
+        
+        ttk.Label(fields, text="ID:").grid(row=0, column=0, sticky=W, pady=2)
+        self.emp_id = tk.StringVar()
+        ttk.Entry(fields, textvariable=self.emp_id, width=8, state='readonly').grid(row=0, column=1, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Name:").grid(row=0, column=2, sticky=W, pady=2)
+        self.emp_name = tk.StringVar()
+        ttk.Entry(fields, textvariable=self.emp_name, width=28).grid(row=0, column=3, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Working Days:").grid(row=0, column=4, sticky=W, pady=2)
+        self.emp_days = tk.StringVar()
+        utils.NumberEntry(fields, textvariable=self.emp_days, allow_decimal=False, width=10).grid(row=0, column=5, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Description:").grid(row=1, column=0, sticky=NW, pady=2)
+        self.emp_desc = tk.Text(fields, width=50, height=3)
+        self.emp_desc.grid(row=1, column=1, columnspan=3, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Note:").grid(row=1, column=4, sticky=NW, pady=2)
+        self.emp_note = tk.Text(fields, width=40, height=3)
+        self.emp_note.grid(row=1, column=5, padx=(6, 0), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="File:").grid(row=2, column=0, sticky=W, pady=2)
+        self.emp_file = tk.StringVar()
+        ttk.Entry(fields, textvariable=self.emp_file, width=50).grid(row=2, column=1, columnspan=3, padx=(6, 10), pady=2, sticky=W)
+        ttk.Button(fields, text="Browse", command=self._browse_emp_file, bootstyle=SECONDARY).grid(row=2, column=4, pady=2, sticky=W)
+        
+        btns = ttk.Frame(tab)
+        btns.pack(fill=X, padx=5, pady=(0, 5))
+        ttk.Button(btns, text="Add", command=self._emp_add, bootstyle=PRIMARY).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Update", command=self._emp_update, bootstyle=INFO).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Delete", command=self._emp_delete, bootstyle=DANGER).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Clear", command=self._emp_clear, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        
+        self.emp_tree = ttk.Treeview(tab, columns=("ID","Name","Description","Days","Note","File"), show='headings', height=12)
+        for col, w in [("ID",60),("Name",180),("Description",280),("Days",70),("Note",240),("File",200)]:
+            self.emp_tree.heading(col, text=col)
+            self.emp_tree.column(col, width=w)
+        vsb = ttk.Scrollbar(tab, orient=VERTICAL, command=self.emp_tree.yview)
+        self.emp_tree.configure(yscrollcommand=vsb.set)
+        self.emp_tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(5,0), pady=5)
+        vsb.pack(side=RIGHT, fill=Y, padx=(0,5), pady=5)
+        self.emp_tree.bind('<<TreeviewSelect>>', self._emp_on_select)
+        self.emp_tree.bind('<Double-1>', self._emp_open_file)
+    
+    def _browse_emp_file(self):
+        path = filedialog.askopenfilename()
+        if path:
+            self.emp_file.set(path)
+    
+    def _emp_open_file(self, event=None):
+        sel = self.emp_tree.selection()
+        if not sel:
+            return
+        item = self.emp_tree.item(sel[0])
+        file_path = item['values'][5]
+        if file_path and os.path.exists(file_path):
+            utils.open_file_externally(file_path)
+        else:
+            utils.show_error("File not found", "The attached file could not be found.")
+    
+    def _emp_clear(self):
+        self.emp_id.set("")
+        self.emp_name.set("")
+        self.emp_days.set("")
+        self.emp_desc.delete('1.0', tk.END)
+        self.emp_note.delete('1.0', tk.END)
+        self.emp_file.set("")
+        self.emp_tree.selection_remove(self.emp_tree.selection())
+    
+    def _emp_add(self):
+        name = (self.emp_name.get() or '').strip()
+        days = (self.emp_days.get() or '0').strip()
+        if not name:
+            utils.show_error("Validation Error", "Name is required")
+            return
+        if not utils.validate_int(days):
+            utils.show_error("Validation Error", "Working days must be numeric")
+            return
+        description = self.emp_desc.get('1.0', tk.END).strip()
+        note = self.emp_note.get('1.0', tk.END).strip()
+        src_file = (self.emp_file.get() or '').strip()
+        dst_path = ''
+        if src_file and os.path.exists(src_file):
+            filename = os.path.basename(src_file)
+            dst_path = str(config.ASSETS_EMPLOYEES_DIR / filename)
+            try:
+                os.makedirs(config.ASSETS_EMPLOYEES_DIR, exist_ok=True)
+                import shutil
+                shutil.copy2(src_file, dst_path)
+            except Exception as e:
+                utils.show_error("File Error", f"Failed to copy file: {e}")
+                return
+        self.db_manager.add_employee(name, description, int(days), note, dst_path)
+        utils.show_info("Success", "Employee added")
+        self.refresh()
+        self._emp_clear()
+    
+    def _emp_update(self):
+        if not self.emp_id.get():
+            utils.show_warning("No Selection", "Please select a record to update")
+            return
+        name = (self.emp_name.get() or '').strip()
+        days = (self.emp_days.get() or '0').strip()
+        if not name:
+            utils.show_error("Validation Error", "Name is required")
+            return
+        if not utils.validate_int(days):
+            utils.show_error("Validation Error", "Working days must be numeric")
+            return
+        description = self.emp_desc.get('1.0', tk.END).strip()
+        note = self.emp_note.get('1.0', tk.END).strip()
+        src_file = (self.emp_file.get() or '').strip()
+        current = next((r for r in self.db_manager.get_employees() if r['id'] == int(self.emp_id.get())), None)
+        dst_path = current['file_path'] if current else ''
+        if src_file and os.path.exists(src_file) and (not current or os.path.abspath(src_file) != os.path.abspath(current['file_path'] or '')):
+            filename = os.path.basename(src_file)
+            dst_path = str(config.ASSETS_EMPLOYEES_DIR / filename)
+            try:
+                os.makedirs(config.ASSETS_EMPLOYEES_DIR, exist_ok=True)
+                import shutil
+                shutil.copy2(src_file, dst_path)
+            except Exception as e:
+                utils.show_error("File Error", f"Failed to copy file: {e}")
+                return
+        self.db_manager.update_employee(int(self.emp_id.get()), name, description, int(days), note, dst_path)
+        utils.show_info("Success", "Employee updated")
+        self.refresh()
+    
+    def _emp_delete(self):
+        if not self.emp_id.get():
+            utils.show_warning("No Selection", "Please select a record to delete")
+            return
+        if utils.ask_yes_no("Confirm", "Delete this employee?\nOptionally delete file from disk?"):
+            # Best-effort delete file if exists
+            current = next((r for r in self.db_manager.get_employees() if r['id'] == int(self.emp_id.get())), None)
+            if current and current['file_path'] and os.path.exists(current['file_path']):
+                try:
+                    os.remove(current['file_path'])
+                except Exception:
+                    pass
+            self.db_manager.delete_employee(int(self.emp_id.get()))
+            utils.show_info("Success", "Employee deleted")
+            self.refresh()
+            self._emp_clear()
+    
+    def _emp_on_select(self, event=None):
+        sel = self.emp_tree.selection()
+        if not sel:
+            return
+        item = self.emp_tree.item(sel[0])
+        self.emp_id.set(item['values'][0])
+        self.emp_name.set(item['values'][1])
+        self.emp_desc.delete('1.0', tk.END)
+        self.emp_desc.insert('1.0', item['values'][2])
+        self.emp_days.set(item['values'][3])
+        self.emp_note.delete('1.0', tk.END)
+        self.emp_note.insert('1.0', item['values'][4])
+        self.emp_file.set(item['values'][5])
+    
+    # ---- Tools Tab ----
+    def _build_tools_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Tools")
+        
+        fields = ttk.Frame(tab)
+        fields.pack(fill=X, padx=5, pady=5)
+        
+        ttk.Label(fields, text="ID:").grid(row=0, column=0, sticky=W, pady=2)
+        self.tool_id = tk.StringVar()
+        ttk.Entry(fields, textvariable=self.tool_id, width=8, state='readonly').grid(row=0, column=1, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Name:").grid(row=0, column=2, sticky=W, pady=2)
+        self.tool_name = tk.StringVar()
+        ttk.Entry(fields, textvariable=self.tool_name, width=28).grid(row=0, column=3, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Price:").grid(row=0, column=4, sticky=W, pady=2)
+        self.tool_price = tk.StringVar()
+        utils.NumberEntry(fields, textvariable=self.tool_price, allow_decimal=True, width=12).grid(row=0, column=5, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Description:").grid(row=1, column=0, sticky=NW, pady=2)
+        self.tool_desc = tk.Text(fields, width=50, height=3)
+        self.tool_desc.grid(row=1, column=1, columnspan=3, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Note:").grid(row=1, column=4, sticky=NW, pady=2)
+        self.tool_note = tk.Text(fields, width=40, height=3)
+        self.tool_note.grid(row=1, column=5, padx=(6, 0), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="File:").grid(row=2, column=0, sticky=W, pady=2)
+        self.tool_file = tk.StringVar()
+        ttk.Entry(fields, textvariable=self.tool_file, width=50).grid(row=2, column=1, columnspan=3, padx=(6, 10), pady=2, sticky=W)
+        ttk.Button(fields, text="Browse", command=self._browse_tool_file, bootstyle=SECONDARY).grid(row=2, column=4, pady=2, sticky=W)
+        
+        btns = ttk.Frame(tab)
+        btns.pack(fill=X, padx=5, pady=(0, 5))
+        ttk.Button(btns, text="Add", command=self._tool_add, bootstyle=PRIMARY).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Update", command=self._tool_update, bootstyle=INFO).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Delete", command=self._tool_delete, bootstyle=DANGER).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Clear", command=self._tool_clear, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        
+        self.tool_tree = ttk.Treeview(tab, columns=("ID","Name","Description","Price","Note","File"), show='headings', height=12)
+        for col, w in [("ID",60),("Name",180),("Description",280),("Price",100),("Note",240),("File",200)]:
+            self.tool_tree.heading(col, text=col)
+            self.tool_tree.column(col, width=w)
+        vsb = ttk.Scrollbar(tab, orient=VERTICAL, command=self.tool_tree.yview)
+        self.tool_tree.configure(yscrollcommand=vsb.set)
+        self.tool_tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(5,0), pady=5)
+        vsb.pack(side=RIGHT, fill=Y, padx=(0,5), pady=5)
+        self.tool_tree.bind('<<TreeviewSelect>>', self._tool_on_select)
+        self.tool_tree.bind('<Double-1>', self._tool_open_file)
+    
+    def _browse_tool_file(self):
+        path = filedialog.askopenfilename()
+        if path:
+            self.tool_file.set(path)
+    
+    def _tool_open_file(self, event=None):
+        sel = self.tool_tree.selection()
+        if not sel:
+            return
+        item = self.tool_tree.item(sel[0])
+        file_path = item['values'][5]
+        if file_path and os.path.exists(file_path):
+            utils.open_file_externally(file_path)
+        else:
+            utils.show_error("File not found", "The attached file could not be found.")
+    
+    def _tool_clear(self):
+        self.tool_id.set("")
+        self.tool_name.set("")
+        self.tool_price.set("")
+        self.tool_desc.delete('1.0', tk.END)
+        self.tool_note.delete('1.0', tk.END)
+        self.tool_file.set("")
+        self.tool_tree.selection_remove(self.tool_tree.selection())
+    
+    def _tool_add(self):
+        name = (self.tool_name.get() or '').strip()
+        price = (self.tool_price.get() or '0').strip()
+        if not name:
+            utils.show_error("Validation Error", "Name is required")
+            return
+        if not utils.validate_float(price):
+            utils.show_error("Validation Error", "Price must be numeric")
+            return
+        description = self.tool_desc.get('1.0', tk.END).strip()
+        note = self.tool_note.get('1.0', tk.END).strip()
+        src_file = (self.tool_file.get() or '').strip()
+        dst_path = ''
+        if src_file and os.path.exists(src_file):
+            filename = os.path.basename(src_file)
+            dst_path = str(config.ASSETS_TOOLS_DIR / filename)
+            try:
+                os.makedirs(config.ASSETS_TOOLS_DIR, exist_ok=True)
+                import shutil
+                shutil.copy2(src_file, dst_path)
+            except Exception as e:
+                utils.show_error("File Error", f"Failed to copy file: {e}")
+                return
+        self.db_manager.add_tool(name, description, float(price), note, dst_path)
+        utils.show_info("Success", "Tool added")
+        self.refresh()
+        self._tool_clear()
+    
+    def _tool_update(self):
+        if not self.tool_id.get():
+            utils.show_warning("No Selection", "Please select a record to update")
+            return
+        name = (self.tool_name.get() or '').strip()
+        price = (self.tool_price.get() or '0').strip()
+        if not name:
+            utils.show_error("Validation Error", "Name is required")
+            return
+        if not utils.validate_float(price):
+            utils.show_error("Validation Error", "Price must be numeric")
+            return
+        description = self.tool_desc.get('1.0', tk.END).strip()
+        note = self.tool_note.get('1.0', tk.END).strip()
+        src_file = (self.tool_file.get() or '').strip()
+        current = next((r for r in self.db_manager.get_tools() if r['id'] == int(self.tool_id.get())), None)
+        dst_path = current['file_path'] if current else ''
+        if src_file and os.path.exists(src_file) and (not current or os.path.abspath(src_file) != os.path.abspath(current['file_path'] or '')):
+            filename = os.path.basename(src_file)
+            dst_path = str(config.ASSETS_TOOLS_DIR / filename)
+            try:
+                os.makedirs(config.ASSETS_TOOLS_DIR, exist_ok=True)
+                import shutil
+                shutil.copy2(src_file, dst_path)
+            except Exception as e:
+                utils.show_error("File Error", f"Failed to copy file: {e}")
+                return
+        self.db_manager.update_tool(int(self.tool_id.get()), name, description, float(price), note, dst_path)
+        utils.show_info("Success", "Tool updated")
+        self.refresh()
+    
+    def _tool_delete(self):
+        if not self.tool_id.get():
+            utils.show_warning("No Selection", "Please select a record to delete")
+            return
+        if utils.ask_yes_no("Confirm", "Delete this tool?\nOptionally delete file from disk?"):
+            current = next((r for r in self.db_manager.get_tools() if r['id'] == int(self.tool_id.get())), None)
+            if current and current['file_path'] and os.path.exists(current['file_path']):
+                try:
+                    os.remove(current['file_path'])
+                except Exception:
+                    pass
+            self.db_manager.delete_tool(int(self.tool_id.get()))
+            utils.show_info("Success", "Tool deleted")
+            self.refresh()
+            self._tool_clear()
+    
+    def _tool_on_select(self, event=None):
+        sel = self.tool_tree.selection()
+        if not sel:
+            return
+        item = self.tool_tree.item(sel[0])
+        self.tool_id.set(item['values'][0])
+        self.tool_name.set(item['values'][1])
+        self.tool_desc.delete('1.0', tk.END)
+        self.tool_desc.insert('1.0', item['values'][2])
+        self.tool_price.set(str(item['values'][3]).replace('$',''))
+        self.tool_note.delete('1.0', tk.END)
+        self.tool_note.insert('1.0', item['values'][4])
+        self.tool_file.set(item['values'][5])
+    
+    # ---- Diagnostics Tab ----
+    def _build_diagnostics_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Diagnostic")
+        
+        fields = ttk.Frame(tab)
+        fields.pack(fill=X, padx=5, pady=5)
+        
+        ttk.Label(fields, text="ID:").grid(row=0, column=0, sticky=W, pady=2)
+        self.diag_id = tk.StringVar()
+        ttk.Entry(fields, textvariable=self.diag_id, width=8, state='readonly').grid(row=0, column=1, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Name:").grid(row=0, column=2, sticky=W, pady=2)
+        self.diag_name = tk.StringVar()
+        ttk.Entry(fields, textvariable=self.diag_name, width=28).grid(row=0, column=3, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Price:").grid(row=0, column=4, sticky=W, pady=2)
+        self.diag_price = tk.StringVar()
+        utils.NumberEntry(fields, textvariable=self.diag_price, allow_decimal=True, width=12).grid(row=0, column=5, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Description:").grid(row=1, column=0, sticky=NW, pady=2)
+        self.diag_desc = tk.Text(fields, width=50, height=3)
+        self.diag_desc.grid(row=1, column=1, columnspan=3, padx=(6, 20), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="Note:").grid(row=1, column=4, sticky=NW, pady=2)
+        self.diag_note = tk.Text(fields, width=40, height=3)
+        self.diag_note.grid(row=1, column=5, padx=(6, 0), pady=2, sticky=W)
+        
+        ttk.Label(fields, text="File:").grid(row=2, column=0, sticky=W, pady=2)
+        self.diag_file = tk.StringVar()
+        ttk.Entry(fields, textvariable=self.diag_file, width=50).grid(row=2, column=1, columnspan=3, padx=(6, 10), pady=2, sticky=W)
+        ttk.Button(fields, text="Browse", command=self._browse_diag_file, bootstyle=SECONDARY).grid(row=2, column=4, pady=2, sticky=W)
+        
+        btns = ttk.Frame(tab)
+        btns.pack(fill=X, padx=5, pady=(0, 5))
+        ttk.Button(btns, text="Add", command=self._diag_add, bootstyle=PRIMARY).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Update", command=self._diag_update, bootstyle=INFO).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Delete", command=self._diag_delete, bootstyle=DANGER).pack(side=LEFT, padx=2)
+        ttk.Button(btns, text="Clear", command=self._diag_clear, bootstyle=SECONDARY).pack(side=LEFT, padx=2)
+        
+        self.diag_tree = ttk.Treeview(tab, columns=("ID","Name","Description","Price","Note","File"), show='headings', height=12)
+        for col, w in [("ID",60),("Name",180),("Description",280),("Price",100),("Note",240),("File",200)]:
+            self.diag_tree.heading(col, text=col)
+            self.diag_tree.column(col, width=w)
+        vsb = ttk.Scrollbar(tab, orient=VERTICAL, command=self.diag_tree.yview)
+        self.diag_tree.configure(yscrollcommand=vsb.set)
+        self.diag_tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(5,0), pady=5)
+        vsb.pack(side=RIGHT, fill=Y, padx=(0,5), pady=5)
+        self.diag_tree.bind('<<TreeviewSelect>>', self._diag_on_select)
+        self.diag_tree.bind('<Double-1>', self._diag_open_file)
+    
+    def _browse_diag_file(self):
+        path = filedialog.askopenfilename()
+        if path:
+            self.diag_file.set(path)
+    
+    def _diag_open_file(self, event=None):
+        sel = self.diag_tree.selection()
+        if not sel:
+            return
+        item = self.diag_tree.item(sel[0])
+        file_path = item['values'][5]
+        if file_path and os.path.exists(file_path):
+            utils.open_file_externally(file_path)
+        else:
+            utils.show_error("File not found", "The attached file could not be found.")
+    
+    def _diag_clear(self):
+        self.diag_id.set("")
+        self.diag_name.set("")
+        self.diag_price.set("")
+        self.diag_desc.delete('1.0', tk.END)
+        self.diag_note.delete('1.0', tk.END)
+        self.diag_file.set("")
+        self.diag_tree.selection_remove(self.diag_tree.selection())
+    
+    def _diag_add(self):
+        name = (self.diag_name.get() or '').strip()
+        price = (self.diag_price.get() or '0').strip()
+        if not name:
+            utils.show_error("Validation Error", "Name is required")
+            return
+        if not utils.validate_float(price):
+            utils.show_error("Validation Error", "Price must be numeric")
+            return
+        description = self.diag_desc.get('1.0', tk.END).strip()
+        note = self.diag_note.get('1.0', tk.END).strip()
+        src_file = (self.diag_file.get() or '').strip()
+        dst_path = ''
+        if src_file and os.path.exists(src_file):
+            filename = os.path.basename(src_file)
+            dst_path = str(config.ASSETS_DIAGNOSTICS_DIR / filename)
+            try:
+                os.makedirs(config.ASSETS_DIAGNOSTICS_DIR, exist_ok=True)
+                import shutil
+                shutil.copy2(src_file, dst_path)
+            except Exception as e:
+                utils.show_error("File Error", f"Failed to copy file: {e}")
+                return
+        self.db_manager.add_diagnostic(name, description, float(price), note, dst_path)
+        utils.show_info("Success", "Diagnostic added")
+        self.refresh()
+        self._diag_clear()
+    
+    def _diag_update(self):
+        if not self.diag_id.get():
+            utils.show_warning("No Selection", "Please select a record to update")
+            return
+        name = (self.diag_name.get() or '').strip()
+        price = (self.diag_price.get() or '0').strip()
+        if not name:
+            utils.show_error("Validation Error", "Name is required")
+            return
+        if not utils.validate_float(price):
+            utils.show_error("Validation Error", "Price must be numeric")
+            return
+        description = self.diag_desc.get('1.0', tk.END).strip()
+        note = self.diag_note.get('1.0', tk.END).strip()
+        src_file = (self.diag_file.get() or '').strip()
+        current = next((r for r in self.db_manager.get_diagnostics() if r['id'] == int(self.diag_id.get())), None)
+        dst_path = current['file_path'] if current else ''
+        if src_file and os.path.exists(src_file) and (not current or os.path.abspath(src_file) != os.path.abspath(current['file_path'] or '')):
+            filename = os.path.basename(src_file)
+            dst_path = str(config.ASSETS_DIAGNOSTICS_DIR / filename)
+            try:
+                os.makedirs(config.ASSETS_DIAGNOSTICS_DIR, exist_ok=True)
+                import shutil
+                shutil.copy2(src_file, dst_path)
+            except Exception as e:
+                utils.show_error("File Error", f"Failed to copy file: {e}")
+                return
+        self.db_manager.update_diagnostic(int(self.diag_id.get()), name, description, float(price), note, dst_path)
+        utils.show_info("Success", "Diagnostic updated")
+        self.refresh()
+    
+    def _diag_delete(self):
+        if not self.diag_id.get():
+            utils.show_warning("No Selection", "Please select a record to delete")
+            return
+        if utils.ask_yes_no("Confirm", "Delete this diagnostic?\nOptionally delete file from disk?"):
+            current = next((r for r in self.db_manager.get_diagnostics() if r['id'] == int(self.diag_id.get())), None)
+            if current and current['file_path'] and os.path.exists(current['file_path']):
+                try:
+                    os.remove(current['file_path'])
+                except Exception:
+                    pass
+            self.db_manager.delete_diagnostic(int(self.diag_id.get()))
+            utils.show_info("Success", "Diagnostic deleted")
+            self.refresh()
+            self._diag_clear()
+    
+    def _diag_on_select(self, event=None):
+        sel = self.diag_tree.selection()
+        if not sel:
+            return
+        item = self.diag_tree.item(sel[0])
+        self.diag_id.set(item['values'][0])
+        self.diag_name.set(item['values'][1])
+        self.diag_desc.delete('1.0', tk.END)
+        self.diag_desc.insert('1.0', item['values'][2])
+        self.diag_price.set(str(item['values'][3]).replace('$',''))
+        self.diag_note.delete('1.0', tk.END)
+        self.diag_note.insert('1.0', item['values'][4])
+        self.diag_file.set(item['values'][5])
+    
+    def refresh(self):
+        # Employees
+        for i in self.emp_tree.get_children():
+            self.emp_tree.delete(i)
+        for r in self.db_manager.get_employees():
+            self.emp_tree.insert('', END, values=(r['id'], r['name'], r['description'], r['number_of_working_days'], r['note'], r['file_path']))
+        # Tools
+        for i in self.tool_tree.get_children():
+            self.tool_tree.delete(i)
+        for r in self.db_manager.get_tools():
+            price = utils.format_currency(r['price'] or 0)
+            self.tool_tree.insert('', END, values=(r['id'], r['name'], r['description'], price, r['note'], r['file_path']))
+        # Diagnostics
+        for i in self.diag_tree.get_children():
+            self.diag_tree.delete(i)
+        for r in self.db_manager.get_diagnostics():
+            price = utils.format_currency(r['price'] or 0)
+            self.diag_tree.insert('', END, values=(r['id'], r['name'], r['description'], price, r['note'], r['file_path']))
 
