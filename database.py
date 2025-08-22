@@ -804,3 +804,31 @@ class DatabaseManager:
     def delete_diagnostic(self, diag_id: int) -> int:
         query = "DELETE FROM diagnostics WHERE id = ?"
         return self.execute_update(query, (diag_id,))
+
+    # Fetch single service/part by ID
+    def get_service_by_id(self, service_id: int) -> Optional[sqlite3.Row]:
+        query = "SELECT * FROM services WHERE id = ?"
+        rows = self.execute_query(query, (service_id,))
+        return rows[0] if rows else None
+
+    def get_spare_part_by_id(self, part_id: int) -> Optional[sqlite3.Row]:
+        query = "SELECT * FROM spare_parts WHERE id = ?"
+        rows = self.execute_query(query, (part_id,))
+        return rows[0] if rows else None
+
+    # New: Update operations for services and spare parts
+    def update_service(self, service_id: int, work_order_id: int, name: str, description: str, quantity: int, price: float) -> int:
+        """Update a service and recalculate the work order total."""
+        query = "UPDATE services SET name = ?, description = ?, quantity = ?, price = ? WHERE id = ?"
+        result = self.execute_update(query, (name, description, quantity, price, service_id))
+        # Recalculate total cost for the work order
+        self.calculate_work_order_total(work_order_id)
+        return result
+
+    def update_spare_part(self, part_id: int, work_order_id: int, name: str, description: str, quantity: int, price: float) -> int:
+        """Update a spare part and recalculate the work order total."""
+        query = "UPDATE spare_parts SET name = ?, description = ?, quantity = ?, price = ? WHERE id = ?"
+        result = self.execute_update(query, (name, description, quantity, price, part_id))
+        # Recalculate total cost for the work order
+        self.calculate_work_order_total(work_order_id)
+        return result
