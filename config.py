@@ -51,6 +51,9 @@ EXPORTS_DIR = Path("exports")
 ASSETS_EMPLOYEES_DIR = ASSETS_DIR / "employees"
 ASSETS_TOOLS_DIR = ASSETS_DIR / "tools"
 ASSETS_DIAGNOSTICS_DIR = ASSETS_DIR / "diagnostics"
+ASSETS_WORK_ORDERS_DIR = ASSETS_DIR / "work_orders"
+ASSETS_SERVICE_ATTACHMENTS_DIR = ASSETS_WORK_ORDERS_DIR / "services"
+ASSETS_PART_ATTACHMENTS_DIR = ASSETS_WORK_ORDERS_DIR / "spare_parts"
 
 # Create directories if they don't exist
 ASSETS_DIR.mkdir(exist_ok=True)
@@ -59,6 +62,9 @@ EXPORTS_DIR.mkdir(exist_ok=True)
 ASSETS_EMPLOYEES_DIR.mkdir(parents=True, exist_ok=True)
 ASSETS_TOOLS_DIR.mkdir(parents=True, exist_ok=True)
 ASSETS_DIAGNOSTICS_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_WORK_ORDERS_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_SERVICE_ATTACHMENTS_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_PART_ATTACHMENTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Services and Parts predefined lists
 DEFAULT_SERVICES = [

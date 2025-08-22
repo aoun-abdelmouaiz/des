@@ -1592,13 +1592,17 @@ class WorkOrderDetailsWindow:
                   bootstyle=DANGER).pack(side=LEFT, padx=5)
         
         # Services treeview
-        columns = ('ID', 'Name', 'Description', 'Quantity', 'Price', 'Total')
+        columns = ('ID', 'Name', 'Description', 'Quantity', 'Price', 'Total', 'Attachment')
         self.services_tree = ttk.Treeview(services_frame, columns=columns, show='headings', height=12)
         
         for col in columns:
             self.services_tree.heading(col, text=col)
             if col == 'Description':
                 self.services_tree.column(col, width=200)
+            elif col == 'Name':
+                self.services_tree.column(col, width=150)
+            elif col == 'Attachment':
+                self.services_tree.column(col, width=100)
             else:
                 self.services_tree.column(col, width=100)
         
@@ -1626,13 +1630,17 @@ class WorkOrderDetailsWindow:
                   bootstyle=DANGER).pack(side=LEFT, padx=5)
         
         # Parts treeview
-        columns = ('ID', 'Name', 'Description', 'Quantity', 'Price', 'Total')
+        columns = ('ID', 'Name', 'Description', 'Quantity', 'Price', 'Total', 'Attachment')
         self.parts_tree = ttk.Treeview(parts_frame, columns=columns, show='headings', height=12)
         
         for col in columns:
             self.parts_tree.heading(col, text=col)
             if col == 'Description':
                 self.parts_tree.column(col, width=200)
+            elif col == 'Name':
+                self.parts_tree.column(col, width=150)
+            elif col == 'Attachment':
+                self.parts_tree.column(col, width=100)
             else:
                 self.parts_tree.column(col, width=100)
         
@@ -1692,7 +1700,8 @@ class WorkOrderDetailsWindow:
                 utils.truncate_text(service['description'] or '', 30),
                 service['quantity'],
                 utils.format_currency(service['price']),
-                utils.format_currency(total)
+                utils.format_currency(total),
+                'Yes' if (service['file_path'] or '').strip() else ''
             ))
     
     def refresh_parts(self):
@@ -1711,7 +1720,8 @@ class WorkOrderDetailsWindow:
                 utils.truncate_text(part['description'] or '', 30),
                 part['quantity'],
                 utils.format_currency(part['price']),
-                utils.format_currency(total)
+                utils.format_currency(total),
+                'Yes' if (part['file_path'] or '').strip() else ''
             ))
     
     def update_total(self):
@@ -1726,12 +1736,16 @@ class WorkOrderDetailsWindow:
         
         if dialog.result:
             try:
+                saved_path = None
+                if dialog.result.get('file_path'):
+                    saved_path = utils.save_attachment_for_item(dialog.result['file_path'], self.work_order_id, 'service')
                 self.db_manager.add_service(
                     self.work_order_id,
                     dialog.result['name'],
                     dialog.result['description'],
                     dialog.result['quantity'],
-                    dialog.result['price']
+                    dialog.result['price'],
+                    saved_path
                 )
                 utils.show_info("Success", "Service added successfully")
                 self.refresh_services()
@@ -1756,19 +1770,25 @@ class WorkOrderDetailsWindow:
             'name': row['name'],
             'description': row['description'],
             'quantity': row['quantity'],
-            'price': row['price']
+            'price': row['price'],
+            'file_path': row['file_path']
         }
         dialog = ServiceDialog(self.window, service=service_data)
         self.window.wait_window(dialog.dialog)
         if dialog.result:
             try:
+                saved_path = row['file_path']
+                new_sel = dialog.result.get('file_path')
+                if new_sel is not None and new_sel != row['file_path']:
+                    saved_path = utils.save_attachment_for_item(new_sel, self.work_order_id, 'service', service_id)
                 self.db_manager.update_service(
                     service_id,
                     self.work_order_id,
                     dialog.result['name'],
                     dialog.result['description'],
                     dialog.result['quantity'],
-                    dialog.result['price']
+                    dialog.result['price'],
+                    saved_path
                 )
                 utils.show_info("Success", "Service updated successfully")
                 self.refresh_services()
@@ -1803,12 +1823,16 @@ class WorkOrderDetailsWindow:
         
         if dialog.result:
             try:
+                saved_path = None
+                if dialog.result.get('file_path'):
+                    saved_path = utils.save_attachment_for_item(dialog.result['file_path'], self.work_order_id, 'part')
                 self.db_manager.add_spare_part(
                     self.work_order_id,
                     dialog.result['name'],
                     dialog.result['description'],
                     dialog.result['quantity'],
-                    dialog.result['price']
+                    dialog.result['price'],
+                    saved_path
                 )
                 utils.show_info("Success", "Spare part added successfully")
                 self.refresh_parts()
@@ -1833,19 +1857,25 @@ class WorkOrderDetailsWindow:
             'name': row['name'],
             'description': row['description'],
             'quantity': row['quantity'],
-            'price': row['price']
+            'price': row['price'],
+            'file_path': row['file_path']
         }
         dialog = SparePartDialog(self.window, part=part_data)
         self.window.wait_window(dialog.dialog)
         if dialog.result:
             try:
+                saved_path = row['file_path']
+                new_sel = dialog.result.get('file_path')
+                if new_sel is not None and new_sel != row['file_path']:
+                    saved_path = utils.save_attachment_for_item(new_sel, self.work_order_id, 'part', part_id)
                 self.db_manager.update_spare_part(
                     part_id,
                     self.work_order_id,
                     dialog.result['name'],
                     dialog.result['description'],
                     dialog.result['quantity'],
-                    dialog.result['price']
+                    dialog.result['price'],
+                    saved_path
                 )
                 utils.show_info("Success", "Part updated successfully")
                 self.refresh_parts()
@@ -1872,6 +1902,28 @@ class WorkOrderDetailsWindow:
                 self.update_total()
             except Exception as e:
                 utils.show_error("Error", f"Failed to remove part: {e}")
+    
+    def open_selected_service_attachment(self):
+        selection = self.services_tree.selection()
+        if not selection:
+            return
+        item = self.services_tree.item(selection[0])
+        service_id = int(item['values'][0])
+        row = self.db_manager.get_service_by_id(service_id)
+        if not row:
+            return
+        utils.open_if_exists(row['file_path'])
+    
+    def open_selected_part_attachment(self):
+        selection = self.parts_tree.selection()
+        if not selection:
+            return
+        item = self.parts_tree.item(selection[0])
+        part_id = int(item['values'][0])
+        row = self.db_manager.get_spare_part_by_id(part_id)
+        if not row:
+            return
+        utils.open_if_exists(row['file_path'])
 
 class StatusUpdateDialog(BaseDialog):
     """Dialog for updating work order status"""

@@ -10,6 +10,9 @@ import platform
 from datetime import datetime, timedelta
 from typing import Optional, Any
 import config
+import shutil
+import uuid
+from pathlib import Path
 
 def show_error(title: str, message: str):
     """Show error message dialog"""
@@ -96,6 +99,65 @@ def select_image_file() -> Optional[str]:
         filetypes=filetypes,
         initialdir=config.LOGOS_DIR
     )
+
+def select_attachment_file() -> Optional[str]:
+    """Open file dialog to select an attachment (images, pdf, documents)."""
+    filetypes = [
+        ("Common", "*.png *.jpg *.jpeg *.gif *.bmp *.pdf *.doc *.docx *.xls *.xlsx *.txt"),
+        ("Images", "*.png *.jpg *.jpeg *.gif *.bmp"),
+        ("PDF", "*.pdf"),
+        ("Word", "*.doc *.docx"),
+        ("Excel", "*.xls *.xlsx"),
+        ("Text", "*.txt"),
+        ("All files", "*.*"),
+    ]
+    return filedialog.askopenfilename(title="Select Attachment", filetypes=filetypes)
+
+def save_attachment_for_item(src_path: str, work_order_id: int, item_type: str, item_id: Optional[int] = None) -> Optional[str]:
+    """Copy the selected attachment into assets under work_orders/services or spare_parts.
+
+    item_type: "service" or "part".
+    Returns the relative saved path string, or None if failed.
+    """
+    try:
+        if not src_path or not os.path.exists(src_path):
+            return None
+        # If already within assets, don't copy
+        try:
+            assets_root = (config.ASSETS_DIR).resolve()
+            src_resolved = (Path(src_path)).resolve()
+            src_resolved.relative_to(assets_root)
+            return str(src_resolved)
+        except Exception:
+            pass
+        # Determine base directory
+        if item_type == "service":
+            base_dir = config.ASSETS_SERVICE_ATTACHMENTS_DIR
+        else:
+            base_dir = config.ASSETS_PART_ATTACHMENTS_DIR
+        # Create work order subfolder
+        target_dir = base_dir / f"wo_{work_order_id}"
+        target_dir.mkdir(parents=True, exist_ok=True)
+        # Build unique filename, preserving extension
+        ext = os.path.splitext(src_path)[1]
+        unique = uuid.uuid4().hex[:12]
+        name = f"{item_type}_{item_id or 'new'}_{unique}{ext}"
+        dst_path = target_dir / name
+        shutil.copy2(src_path, dst_path)
+        return str(dst_path)
+    except Exception as e:
+        show_error("Error", f"Failed to save attachment: {e}")
+        return None
+
+def open_if_exists(file_path: Optional[str]):
+    """Open a file if the path exists."""
+    if not file_path:
+        show_warning("No Attachment", "No attachment available for this item.")
+        return
+    if not os.path.exists(file_path):
+        show_error("Missing File", "The attachment file was not found on disk.")
+        return
+    open_file_externally(file_path)
 
 def save_file_dialog(defaultextension: str = ".pdf", filetypes: list = None) -> Optional[str]:
     """Open save file dialog"""
